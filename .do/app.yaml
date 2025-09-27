@@ -1,0 +1,22 @@
+name: gestaoapp
+services:
+- name: web
+  source_dir: /
+  github:
+    repo: spectrumbr/gestaoapp
+    branch: main
+  build_command: npm run build
+  run_command: npm start
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  http_port: 3000
+  health_check:
+    http_path: /
+  envs:
+  - key: NODE_ENV
+    value: production
+  - key: NEXT_TELEMETRY_DISABLED
+    value: "1"
+  - key: PORT
+    value: "3000"

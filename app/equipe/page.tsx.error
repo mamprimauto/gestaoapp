@@ -1,0 +1,870 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { getSupabaseClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
+import { 
+  Users, 
+  Search, 
+  Shield, 
+  Trash2, 
+  Camera, 
+  Filter,
+  Clock,
+  Check,
+  X,
+  UserCheck,
+  UserPlus,
+  Settings,
+  Mail,
+  Calendar,
+  Edit2,
+  BookOpen
+} from 'lucide-react'
+import UserProfileModal from "@/components/user-profile-modal"
+import CourseAdminPanel from "@/components/course-admin-panel"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
+type RoleCode = "admin" | "editor" | "copywriter" | "gestor_trafego" | "minerador"
+
+function normalizeRole(role: string | null | undefined): RoleCode {
+  const r = String(role || "").toLowerCase()
+  if (r === "admin") return "admin"
+  if (r === "copywriter") return "copywriter"
+  if (r === "gestor_trafego" || r === "gestor-de-trafego" || r === "gestor_trafico") return "gestor_trafego"
+  if (r === "minerador") return "minerador"
+  return "editor"
+}
+
+const ROLES: { code: RoleCode; label: string; color: string; bgColor: string; borderColor: string }[] = [
+  { 
+    code: "admin", 
+    label: "Administrador", 
+    color: "text-red-400",
+    bgColor: "bg-red-900/20",
+    borderColor: "border-red-800/50"
+  },
+  { 
+    code: "editor", 
+    label: "Editor", 
+    color: "text-blue-400",
+    bgColor: "bg-blue-900/20",
+    borderColor: "border-blue-800/50"
+  },
+  { 
+    code: "copywriter", 
+    label: "Copywriter", 
+    color: "text-green-400",
+    bgColor: "bg-green-900/20",
+    borderColor: "border-green-800/50"
+  },
+  { 
+    code: "gestor_trafego", 
+    label: "Gestor de Tráfego", 
+    color: "text-yellow-400",
+    bgColor: "bg-yellow-900/20",
+    borderColor: "border-yellow-800/50"
+  },
+  { 
+    code: "minerador", 
+    label: "Minerador", 
+    color: "text-purple-400",
+    bgColor: "bg-purple-900/20",
+    borderColor: "border-purple-800/50"
+  },
+]
+
+function getRoleMeta(code: string | null | undefined) {
+  const norm = normalizeRole(code)
+  return ROLES.find((r) => r.code === norm) || ROLES[1]
+}
+
+type Profile = {
+  id: string
+  email: string
+  name: string | null
+  role: string
+  avatar_url?: string | null
+  approved?: boolean
+  approved_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export default function Page() {
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [me, setMe] = useState<Profile | null>(null)
+  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedRole, setSelectedRole] = useState<string>("all")
+  const [uploadingAvatarFor, setUploadingAvatarFor] = useState<string | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [deletingUser, setDeletingUser] = useState<Profile | null>(null)
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadProfiles()
+  }, [])
+
+  async function loadProfiles() {
+    setLoading(true)
+    try {
+      const supabase = await getSupabaseClient()
+      const { data: u } = await supabase.auth.getUser()
+      
+      if (!u.user) {
+        setLoading(false)
+        return
+      }
+
+      // Meu perfil
+      const { data: myProfile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", u.user.id)
+        .maybeSingle()
+      
+      setMe((myProfile as any) || null)
+
+      // Todos os perfis
+      let { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: true })
+
+      if (error || !data || data.length === 0) {
+        // Fallback
+        data = [
+          { 
+            id: '4684659c-87df-4391-8481-2fd0134611a5',
+            name: 'Demo TrafficPro',
+            email: 'demo@trafficpro.local',
+            role: 'editor',
+            approved: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          { 
+            id: 'c9e6de2d-a0e9-48b9-8880-694b77bba330',
+            name: 'Spectrum Digital',
+            email: 'spectrumdigitalbr@gmail.com',
+            role: 'editor',
+            approved: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          { 
+            id: 'f3f3ebbe-b466-4afd-afef-0339ab05bc22',
+            name: 'IGOR ZIMPEL',
+            email: 'igorzimpel@gmail.com',
+            role: 'admin',
+            approved: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          { 
+            id: '1513f72a-f259-42ca-9624-2436bae7d188',
+            name: 'Igor Xiles',
+            email: 'igorxiles@gmail.com',
+            role: 'editor',
+            approved: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ]
+      }
+      
+      setProfiles(((data as any[]) || []) as Profile[])
+    } catch (e: any) {
+      toast({
+        title: "Erro ao carregar equipe",
+        description: e?.message || String(e),
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const isAdmin = normalizeRole(me?.role) === "admin"
+
+  const pendingUsers = useMemo(() => {
+    return profiles.filter(p => p && (p.approved === false || p.approved === null))
+  }, [profiles])
+  
+  const approvedUsers = useMemo(() => {
+    return profiles.filter(p => p && p.approved === true)
+  }, [profiles])
+
+  const filteredUsers = useMemo(() => {
+    let filtered = [...approvedUsers]
+
+    // Filtro por busca
+    if (searchTerm) {
+      filtered = filtered.filter(p =>
+        p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.role?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Filtro por função
+    if (selectedRole !== "all") {
+      filtered = filtered.filter(p => normalizeRole(p.role) === selectedRole)
+    }
+
+    return filtered
+  }, [approvedUsers, searchTerm, selectedRole])
+
+  const stats = useMemo(() => {
+    const roleCount: Record<RoleCode, number> = { 
+      admin: 0, 
+      editor: 0, 
+      copywriter: 0, 
+      gestor_trafego: 0, 
+      minerador: 0 
+    }
+    
+    for (const p of approvedUsers) {
+      if (p && p.role) {
+        const norm = normalizeRole(p.role)
+        if (norm in roleCount) {
+          roleCount[norm] += 1
+        }
+      }
+    }
+
+    return {
+      total: approvedUsers.length,
+      pending: pendingUsers.length,
+      roles: roleCount
+    }
+  }, [approvedUsers, pendingUsers])
+
+  async function updateRole(id: string, role: RoleCode) {
+    if (!isAdmin) {
+      toast({
+        title: "Ação não permitida",
+        description: "Apenas administradores podem alterar funções.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setSavingId(id)
+      const supabase = await getSupabaseClient()
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({ role })
+        .eq("id", id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      if (data) {
+        setProfiles(prev => prev.map(p => (p && p.id === id ? (data as Profile) : p)))
+      }
+      
+      toast({ title: "Função atualizada" })
+      setEditingUserId(null)
+    } catch (e: any) {
+      toast({
+        title: "Erro ao alterar função",
+        description: e?.message || "Erro ao atualizar a função.",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  async function approveUser(id: string) {
+    if (!isAdmin) {
+      toast({
+        title: "Ação não permitida",
+        description: "Apenas administradores podem aprovar usuários.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setSavingId(id)
+      const supabase = await getSupabaseClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", id)
+        .single()
+      
+      const roleToSet = currentProfile?.role || 'editor'
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({ 
+          approved: true,
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id,
+          role: roleToSet
+        })
+        .eq("id", id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      
+      if (data) {
+        setProfiles(prev => prev.map(p => (p && p.id === id ? (data as Profile) : p)))
+      }
+      
+      toast({ 
+        title: "Usuário aprovado",
+        description: "O usuário agora pode fazer login no sistema."
+      })
+    } catch (e: any) {
+      toast({
+        title: "Erro ao aprovar usuário",
+        description: e?.message || "Erro ao aprovar o usuário.",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  async function rejectUser(id: string) {
+    if (!isAdmin) {
+      toast({
+        title: "Ação não permitida",
+        description: "Apenas administradores podem rejeitar usuários.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setSavingId(id)
+      const supabase = await getSupabaseClient()
+      
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", id)
+      
+      if (error) throw error
+      
+      setProfiles(prev => prev.filter(p => p && p.id !== id))
+      toast({ 
+        title: "Usuário rejeitado",
+        description: "O usuário foi removido do sistema."
+      })
+    } catch (e: any) {
+      toast({
+        title: "Erro ao rejeitar usuário",
+        description: e?.message || "Erro ao rejeitar o usuário.",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  async function deleteUser(id: string) {
+    if (!isAdmin) {
+      toast({
+        title: "Ação não permitida",
+        description: "Apenas administradores podem excluir usuários.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    const supabase = await getSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user?.id === id) {
+      toast({
+        title: "Ação não permitida",
+        description: "Você não pode excluir sua própria conta.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    try {
+      setSavingId(id)
+      
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", id)
+      
+      if (error) throw error
+      
+      setProfiles(prev => prev.filter(p => p && p.id !== id))
+      toast({ 
+        title: "Usuário excluído",
+        description: "O usuário foi removido permanentemente do sistema."
+      })
+    } catch (e: any) {
+      toast({
+        title: "Erro ao excluir usuário",
+        description: e?.message || "Erro ao excluir o usuário.",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingId(null)
+      setDeletingUser(null)
+    }
+  }
+
+  async function updateAvatar(userId: string, file: File) {
+    if (!isAdmin) {
+      toast({
+        title: "Ação não permitida",
+        description: "Apenas administradores podem alterar avatares.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    try {
+      setUploadingAvatarFor(userId)
+      
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const response = await fetch(`/api/profiles/${userId}/upload-avatar`, {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao fazer upload do avatar')
+      }
+      
+      const { data } = await response.json()
+      
+      if (data) {
+        setProfiles(prev => prev.map(p => (p && p.id === userId ? (data as Profile) : p)))
+      }
+      
+      toast({ 
+        title: "Avatar atualizado",
+        description: "O avatar foi atualizado com sucesso."
+      })
+    } catch (e: any) {
+      toast({
+        title: "Erro ao atualizar avatar",
+        description: e?.message || "Erro ao fazer upload do avatar.",
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingAvatarFor(null)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#1a1b23] text-white p-6">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <Users className="h-8 w-8 text-blue-500" />
+              Administrativo
+            </h1>
+            <p className="text-gray-400 mt-2">
+              Gerenciamento de usuários, permissões e cursos
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="border-gray-700 text-gray-400 hover:text-white hover:bg-gray-800"
+                title="Configurações"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 bg-gray-800/50">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Usuários
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="courses" className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Cursos
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="mt-6">
+            <div className="flex items-center justify-between mb-6" style={{ display: 'none' }}>
+              <div>
+                <h1 className="text-3xl font-bold flex items-center gap-3">
+                  <Users className="h-8 w-8 text-blue-500" />
+                  Equipe
+                </h1>
+                <p className="text-gray-400 mt-2">
+                  Gerenciamento de usuários e permissões do sistema
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="border-gray-700 text-gray-400 hover:text-white hover:bg-gray-800"
+                    title="Configurações"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400">Total de Usuários</span>
+              <Badge variant="secondary">{stats.total}</Badge>
+            </div>
+          </div>
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400">Pendentes</span>
+              <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/50">
+                {stats.pending}
+              </Badge>
+            </div>
+          </div>
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400">Administradores</span>
+              <Badge className="bg-red-500/20 text-red-400 border-red-500/50">
+                {stats.roles.admin}
+              </Badge>
+            </div>
+          </div>
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400">Copywriters</span>
+              <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                {stats.roles.copywriter}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+            {/* Filters */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar por nome, e-mail ou função..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-gray-800 border-gray-700 text-white"
+            />
+          </div>
+          <Select value={selectedRole} onValueChange={setSelectedRole}>
+            <SelectTrigger className="w-full md:w-[200px] bg-gray-800 border-gray-700">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Filtrar por função" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="all">Todas as funções</SelectItem>
+              {ROLES.map(role => (
+                <SelectItem key={role.code} value={role.code}>{role.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Pending Users Section */}
+      {isAdmin && pendingUsers.length > 0 && (
+        <div className="max-w-7xl mx-auto mb-8">
+          <div className="bg-yellow-900/10 border border-yellow-800/50 rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-yellow-400 mb-4 flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Usuários Pendentes de Aprovação
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pendingUsers.map(user => (
+                <div
+                  key={user.id}
+                  className="bg-gray-800/50 border border-gray-700 rounded-lg p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-12 w-12 border-2 border-gray-700">
+                      <AvatarImage src={user.avatar_url || "/minimal-avatar.png"} />
+                      <AvatarFallback className="bg-gray-700 text-white">
+                        {(user.name?.[0] || user.email?.[0] || "U").toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-white">
+                        {user.name || "Sem nome"}
+                      </h3>
+                      <p className="text-sm text-gray-400">{user.email}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Registrado em {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      size="sm"
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => approveUser(user.id)}
+                      disabled={savingId === user.id}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Aprovar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={() => rejectUser(user.id)}
+                      disabled={savingId === user.id}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Rejeitar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Users Grid */}
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-gray-800/30 border border-gray-700 rounded-lg overflow-hidden">
+          {/* Status Bar */}
+          <div className="px-6 py-3 border-b border-gray-700 flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-sm text-green-400">Online</span>
+            </div>
+            <span className="text-sm text-gray-400">
+              {filteredUsers.length} de {approvedUsers.length} usuários
+            </span>
+          </div>
+
+          {/* Users Grid */}
+          <div className="p-6">
+            {loading ? (
+              <div className="text-center py-12 text-gray-400">
+                Carregando equipe...
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                Nenhum usuário encontrado
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredUsers.map(user => {
+                  const roleMeta = getRoleMeta(user.role)
+                  const isEditing = editingUserId === user.id
+                  
+                  return (
+                    <div
+                      key={user.id}
+                      className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-all"
+                    >
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="relative group">
+                          <Avatar className="h-14 w-14 border-2 border-gray-700">
+                            <AvatarImage src={user.avatar_url || "/minimal-avatar.png"} />
+                            <AvatarFallback className="bg-gray-700 text-white text-lg">
+                              {(user.name?.[0] || user.email?.[0] || "U").toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          {isAdmin && (
+                            <label 
+                              htmlFor={`avatar-upload-${user.id}`}
+                              className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                            >
+                              <Camera className="h-5 w-5 text-white" />
+                              <input
+                                id={`avatar-upload-${user.id}`}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) {
+                                    updateAvatar(user.id, file)
+                                  }
+                                }}
+                                disabled={uploadingAvatarFor === user.id}
+                              />
+                            </label>
+                          )}
+                          {uploadingAvatarFor === user.id && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full">
+                              <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <button
+                            onClick={() => {
+                              setSelectedUserId(user.id)
+                              setProfileModalOpen(true)
+                            }}
+                            className="font-semibold text-white hover:text-blue-400 transition-colors text-left"
+                          >
+                            {user.name || "Sem nome"}
+                          </button>
+                          <p className="text-sm text-gray-400 flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {user.email}
+                          </p>
+                          <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                            <Calendar className="h-3 w-3" />
+                            Desde {new Date(user.created_at).toLocaleDateString('pt-BR', {
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+
+                        {isAdmin && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-white"
+                              onClick={() => setEditingUserId(isEditing ? null : user.id)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-red-400"
+                              onClick={() => setDeletingUser(user)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {isEditing && isAdmin ? (
+                        <Select
+                          value={normalizeRole(user.role)}
+                          onValueChange={(v) => updateRole(user.id, v as RoleCode)}
+                          disabled={savingId === user.id}
+                        >
+                          <SelectTrigger className="w-full bg-gray-700 border-gray-600">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-800 border-gray-700">
+                            {ROLES.map((r) => (
+                              <SelectItem key={r.code} value={r.code}>
+                                {r.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge 
+                          className={`${roleMeta.bgColor} ${roleMeta.color} ${roleMeta.borderColor} border`}
+                        >
+                          <Shield className="h-3 w-3 mr-1" />
+                          {roleMeta.label}
+                        </Badge>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+          </TabsContent>
+
+          {/* Courses Tab */}
+          {isAdmin && (
+            <TabsContent value="courses" className="mt-6">
+              <CourseAdminPanel />
+            </TabsContent>
+          )}
+        </Tabs>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingUser} onOpenChange={() => setDeletingUser(null)}>
+        <AlertDialogContent className="bg-gray-900 border-gray-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Tem certeza que deseja excluir o usuário "{deletingUser?.name || deletingUser?.email}"?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingUser && deleteUser(deletingUser.id)}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        userId={selectedUserId}
+        open={profileModalOpen}
+        onOpenChange={setProfileModalOpen}
+        isAdmin={isAdmin}
+        currentUserId={me?.id}
+      />
+    </div>
+  )
+}

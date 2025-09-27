@@ -1,0 +1,285 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Kanban Card Animations - Removed conflicting hover animation */
+
+/* Kanban Column Animations */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kanban-column {
+  animation: fade-in-up 0.4s ease-out;
+}
+
+/* Premium Menu Item Animation from PremiumSidebar */
+@keyframes premium-menu-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.premium-menu-item {
+  animation: premium-menu-slide-in 0.3s ease-out;
+  animation-fill-mode: forwards;
+  opacity: 1; /* Fallback para casos onde a animação não roda */
+}
+
+/* Profile Avatar Gradient Animation */
+@keyframes gradient-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Congratulations Animation */
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes gradient-pulse {
+  0%, 100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.avatar-gradient-border {
+  animation: gradient-rotate 3s linear infinite;
+}
+
+.avatar-gradient-pulse {
+  animation: gradient-pulse 2s ease-in-out infinite;
+}
+
+/* Breathing glow effect */
+@keyframes breathing-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.8), 0 0 40px rgba(147, 51, 234, 0.4);
+  }
+}
+
+.breathing-glow {
+  animation: breathing-glow 3s ease-in-out infinite;
+}
+
+/* Department Badge Shine Effect */
+@keyframes badge-shine {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.department-badge-shine {
+  background-size: 200% 100%;
+  animation: badge-shine 3s linear infinite;
+}
+
+/* Enhanced Glow Effects */
+.drop-shadow-glow {
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+/* Profile Section Animations */
+@keyframes profile-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.profile-float {
+  animation: profile-float 3s ease-in-out infinite;
+}
+
+/* Enhanced gradient border animation */
+@keyframes gradient-border-rotate {
+  0% {
+    transform: rotate(0deg);
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+    filter: hue-rotate(360deg);
+  }
+}
+
+.gradient-border-animate {
+  animation: gradient-border-rotate 4s linear infinite;
+}
+
+/* Base CSS custom properties (OKLCH/HSL values) */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 224 71% 4%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 71% 4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71% 4%;
+  --primary: 220 14% 96%;
+  --primary-foreground: 220 9% 46%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 220 9% 46%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 220 14% 96%;
+  --accent-foreground: 220 9% 46%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 20% 98%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 224 71% 4%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 224 71% 4%;
+  --foreground: 210 20% 98%;
+  --card: 224 71% 4%;
+  --card-foreground: 210 20% 98%;
+  --popover: 224 71% 4%;
+  --popover-foreground: 210 20% 98%;
+  --primary: 210 20% 98%;
+  --primary-foreground: 220 9% 46%;
+  --secondary: 215 27% 17%;
+  --secondary-foreground: 210 20% 98%;
+  --muted: 215 27% 17%;
+  --muted-foreground: 217 10% 65%;
+  --accent: 215 27% 17%;
+  --accent-foreground: 210 20% 98%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 210 20% 98%;
+  --border: 215 27% 17%;
+  --input: 215 27% 17%;
+  --ring: 216 12% 84%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) hsl(var(--background));
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+
+  /* Premium Sidebar Animations */
+  .premium-menu-item {
+    animation: slideInLeft 0.6s ease-out forwards;
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  .premium-text-reveal {
+    animation: fadeInUp 0.5s ease-out 0.2s forwards;
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .premium-gradient {
+    animation: rotateGradient 8s ease-in-out infinite;
+  }
+
+  @keyframes slideInLeft {
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fadeInUp {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes rotateGradient {
+    0%, 100% {
+      filter: hue-rotate(0deg) brightness(1);
+    }
+    25% {
+      filter: hue-rotate(90deg) brightness(1.1);
+    }
+    50% {
+      filter: hue-rotate(180deg) brightness(0.9);
+    }
+    75% {
+      filter: hue-rotate(270deg) brightness(1.1);
+    }
+  }
+
+  /* Backdrop blur support */
+  @supports (backdrop-filter: blur(20px)) {
+    .backdrop-blur-xl {
+      backdrop-filter: blur(20px);
+    }
+  }
+
+  /* Glass morphism effect */
+  .glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}

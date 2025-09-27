@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Script para limpar dados do banco
+
+export NEXT_PUBLIC_SUPABASE_URL=https://dpajrkohmqdbskqbimqf.supabase.co
+export NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwYWpya29obXFkYnNrcWJpbXFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NjgxMDYsImV4cCI6MjA3MDI0NDEwNn0.Y1wYF0_Xx69gcyDBI7ikXS9FxW31szU_NOMbcWF7Gmg
+
+node scripts/clean-database.js

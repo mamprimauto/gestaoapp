@@ -1,0 +1,42 @@
+// app/api/tasks/[id]/files/upload/route.ts
+const MAX = 1024 * 1024 * 1024 // 1GB
+
+if (file.size > MAX) {
+  return NextResponse.json({ error: "Arquivo excede 1GB" }, { status: 413 })
+}
+
+// app/api/storage/ensure/route.ts
+// If bucket doesn’t exist, create with proper size limit
+const { data: existing } = await admin.storage.getBucket(bucket)
+if (!existing) {
+  const fileSizeLimit = bucket === "task-files" ? "1GB" : "5MB"
+  const isPublic = bucket === "avatars"
+  const { error: createErr } = await admin.storage.createBucket(bucket, {
+    public: isPublic,
+    fileSizeLimit,
+  })
+  if (createErr) {
+    return NextResponse.json({ error: createErr.message }, { status: 500 })
+  }
+} else {
+  // Try to enforce 1GB for task-files if it already exists
+  if (bucket === "task-files") {
+    const { error: updErr } = await admin.storage.updateBucket(bucket, {
+      public: false,
+      fileSizeLimit: "1GB",
+    })
+    // Não falha a requisição se não for possível atualizar; apenas registra
+    if (updErr) {
+      console.warn("Falha ao atualizar fileSizeLimit do bucket task-files:", updErr.message)
+    }
+  }
+}
+
+// components/task-attachments.tsx
+if (file.size > 1024 * 1024 * 1024) {
+  toast({ title: "Arquivo muito grande", description: `${file.name} excede 1GB`, variant: "destructive" })
+  continue
+}
+
+// Dropzone text update
+"Arraste arquivos aqui ou clique em Enviar. Máx. 1GB por arquivo."

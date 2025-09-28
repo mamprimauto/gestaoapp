@@ -166,6 +166,18 @@ export interface UserProfile {
   updated_at: string
 }
 
+export interface UserPermissions {
+  id: string
+  user_id: string
+  department: UserDepartment
+  access_level: UserAccessLevel
+  additional_departments: UserDepartment[]
+  can_create_shared: boolean
+  can_access_cross_department: boolean
+  created_at: string
+  updated_at: string
+}
+
 // Função para mapear role da equipe para permissões do vault
 export function getVaultPermissions(teamRole: TeamRole): {
   department: UserDepartment

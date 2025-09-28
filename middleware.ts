@@ -81,7 +81,7 @@ export async function middleware(req: NextRequest) {
 
     // Only perform server-side redirects for authenticated users trying to access login
     if (user && isPublicRoute) {
-      const dashboardUrl = new URL('/tarefas', req.url)
+      const dashboardUrl = new URL('/', req.url)
 
       return NextResponse.redirect(dashboardUrl)
     }

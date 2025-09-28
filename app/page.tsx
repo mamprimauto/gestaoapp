@@ -65,21 +65,42 @@ export default function HomePage() {
   useEffect(() => {
     async function checkAuth() {
       try {
+        // Aguardar mais tempo para garantir que a sessão esteja estabelecida
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
         const supabase = await getSupabaseClient()
-        const { data: { session } } = await supabase.auth.getSession()
-        
+
+        // Tentar obter sessão com retry
+        let session = null
+        let attempts = 3
+
+        while (attempts > 0 && !session) {
+          const { data: { session: currentSession } } = await supabase.auth.getSession()
+          session = currentSession
+
+          if (!session && attempts > 1) {
+            console.log('🔄 Sessão não encontrada, tentando novamente em 500ms...')
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+
+          attempts--
+        }
+
+        console.log('🔍 Verificação de autenticação:', session ? 'AUTENTICADO' : 'NÃO AUTENTICADO')
+
         if (!session) {
+          console.log('🔄 Redirecionando para login...')
           router.push('/login?redirect=/')
         } else {
-
+          console.log('✅ Usuário autenticado, permanecendo na página')
         }
       } catch (error) {
-
+        console.error('Erro ao verificar autenticação:', error)
       } finally {
         setCheckingAuth(false)
       }
     }
-    
+
     checkAuth()
   }, [router])
 

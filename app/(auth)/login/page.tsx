@@ -102,56 +102,66 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
+      console.log('🔄 Iniciando login...', { email: loginForm.email })
       const supabase = await getSupabaseClient()
-      
+      console.log('✅ Supabase client obtido')
+
       // Fazer login
+      console.log('🔐 Tentando autenticação...')
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: loginForm.email,
         password: loginForm.password,
       })
 
       if (authError) {
-
+        console.error('❌ Erro de autenticação:', authError)
         throw authError
       }
 
       if (!authData?.user) {
+        console.error('❌ Usuário não encontrado após login')
         throw new Error('Usuário não encontrado após login')
       }
+
+      console.log('✅ Autenticação bem-sucedida, user ID:', authData.user.id)
 
       // Aguardar um momento para garantir que a sessão está estabelecida
       await new Promise(resolve => setTimeout(resolve, 500))
 
       // Verificar se o usuário está aprovado
+      console.log('🔍 Buscando perfil do usuário...')
 
       // Buscar perfil com retry em caso de falha
       let profile = null
       let profileError = null
       let retries = 3
-      
+
       while (retries > 0 && !profile) {
+        console.log(`🔄 Tentativa ${4 - retries}/3 de buscar perfil`)
         const { data: profileData, error: fetchError } = await supabase
           .from('profiles')
           .select('id, email, name, role, approved, avatar_url')
           .eq('id', authData.user.id)
           .single()
-        
+
         if (fetchError) {
+          console.error('❌ Erro ao buscar perfil:', fetchError)
           profileError = fetchError
           retries--
           if (retries > 0) {
-
+            console.log(`⏳ Aguardando 1s antes da próxima tentativa...`)
             await new Promise(resolve => setTimeout(resolve, 1000))
           }
         } else {
           // Garantir que temos um objeto, não um array
           profile = Array.isArray(profileData) ? profileData[0] : profileData
+          console.log('✅ Perfil encontrado:', profile)
         }
       }
 
       // Se não encontrou perfil após todas as tentativas
       if (!profile) {
-
+        console.error('❌ Perfil não encontrado após todas as tentativas')
         await supabase.auth.signOut()
         toast.error('Perfil não encontrado. Contate o administrador.')
         return
@@ -159,23 +169,35 @@ export default function LoginPage() {
 
       // Verificar aprovação - só aceitar boolean true
       if (profile.approved !== true) {
-
+        console.error('❌ Usuário não aprovado:', profile.approved)
         await supabase.auth.signOut()
         toast.error('Sua conta ainda não foi aprovada. Aguarde a aprovação do administrador.')
         return
       }
 
+      console.log('✅ Usuário aprovado, prosseguindo com login')
       toast.success('Login realizado com sucesso!')
-      
-      // Aguardar um momento antes de redirecionar
-      await new Promise(resolve => setTimeout(resolve, 500))
 
+      // Aguardar mais tempo para garantir que a sessão seja persistida
+      console.log('⏳ Aguardando 2s para garantir sincronização da sessão...')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // Verificar se a sessão está realmente estabelecida antes do redirect
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        console.error('❌ Sessão não persistida após login!')
+        toast.error('Erro interno: sessão não foi estabelecida')
+        return
+      }
+
+      console.log('✅ Sessão confirmada, procedendo com redirecionamento')
       const params = new URLSearchParams(window.location.search)
-      const redirect = params.get('redirect') || '/tarefas'
+      const redirect = params.get('redirect') || '/'
+      console.log('🔄 Redirecionando para:', redirect)
       router.push(redirect)
-      
-    } catch (error: any) {
 
+    } catch (error: any) {
+      console.error('❌ Erro no handleLogin:', error)
       toast.error(error.message || 'Erro ao fazer login')
     }
   }
@@ -348,20 +370,29 @@ export default function LoginPage() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       toast.error('Por favor, corrija os erros no formulário')
       return
     }
 
+    console.log('🚀 Iniciando handleAuth, setLoading(true)')
     setLoading(true)
     try {
       if (isLogin) {
+        console.log('🔄 Chamando handleLogin...')
         await handleLogin()
+        console.log('✅ handleLogin finalizado')
       } else {
+        console.log('🔄 Chamando handleRegister...')
         await handleRegister()
+        console.log('✅ handleRegister finalizado')
       }
+    } catch (error) {
+      console.error('❌ Erro no handleAuth:', error)
+      throw error
     } finally {
+      console.log('🔄 Executando finally - setLoading(false)')
       setLoading(false)
     }
   }
